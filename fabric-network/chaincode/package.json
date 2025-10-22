@@ -1,0 +1,16 @@
+{
+  "name": "medical-records-chaincode",
+  "version": "1.0.0",
+  "description": "Healthcare Medical Records Chaincode for Hyperledger Fabric",
+  "main": "medicalRecords.js",
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "start": "fabric-chaincode-node start"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.2.0",
+    "fabric-shim": "^2.2.0"
+  }
+}

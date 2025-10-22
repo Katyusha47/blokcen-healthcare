@@ -1,0 +1,143 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                   HEALTHCARE BLOCKCHAIN SYSTEM                     ║
+║                        QUICK START GUIDE                           ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────┐
+│  📍 SMART CONTRACT LOCATION:                                       │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  E:\blokcen\fabric-network\chaincode\medicalRecords.js           │
+│                                                                    │
+│  This is your Hyperledger Fabric smart contract that:             │
+│  ✅ Stores medical records on blockchain                          │
+│  ✅ Creates immutable audit trails                                │
+│  ✅ Validates transactions                                         │
+│  ✅ Provides query functions                                       │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│  🌐 HOW TO RUN THE WEBSITE (3 STEPS):                             │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  STEP 1: Setup MySQL Database (ONE TIME)                          │
+│  ─────────────────────────────────────────                        │
+│  Option A - Using Script:                                         │
+│    1. Double-click: setup-database.bat                            │
+│    2. Enter your MySQL password                                   │
+│                                                                    │
+│  Option B - Manual:                                               │
+│    1. Open MySQL Command Line                                     │
+│    2. Type:                                                        │
+│       CREATE DATABASE healthcare_blockchain;                      │
+│       USE healthcare_blockchain;                                  │
+│       SOURCE E:/blokcen/database/schema.sql;                      │
+│                                                                    │
+│  STEP 2: Configure .env File                                      │
+│  ────────────────────────────                                     │
+│    1. Open: E:\blokcen\.env                                       │
+│    2. Change this line:                                           │
+│       DB_PASSWORD=your_password                                   │
+│       (Replace with your actual MySQL password)                   │
+│                                                                    │
+│  STEP 3: Start the Server                                         │
+│  ─────────────────────────                                        │
+│  Option A - Quick Start:                                          │
+│    Double-click: start.bat                                        │
+│                                                                    │
+│  Option B - Command Line:                                         │
+│    Open PowerShell in E:\blokcen                                  │
+│    Type: npm start                                                │
+│                                                                    │
+│  STEP 4: Open Browser                                             │
+│  ─────────────────────                                            │
+│    Go to: http://localhost:3000                                   │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│  🔐 LOGIN CREDENTIALS:                                             │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  👨‍⚕️ Doctor Account:                                               │
+│     Email: dr.smith@hospital.com                                  │
+│     Password: password123                                         │
+│                                                                    │
+│  🧑‍⚕️ Patient Account:                                              │
+│     Email: patient1@email.com                                     │
+│     Password: password123                                         │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│  📂 PROJECT STRUCTURE:                                             │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  E:\blokcen\                                                       │
+│  │                                                                 │
+│  ├─ 🌐 WEBSITE (Frontend)                                         │
+│  │  ├─ public\index.html       ← Main webpage                    │
+│  │  ├─ public\css\style.css    ← Styling                         │
+│  │  └─ public\js\app.js        ← JavaScript                      │
+│  │                                                                 │
+│  ├─ ⚙️ BACKEND (Server)                                            │
+│  │  ├─ server.js               ← Express server                  │
+│  │  ├─ controllers\            ← Business logic                  │
+│  │  ├─ routes\                 ← API endpoints                   │
+│  │  └─ config\                 ← Database & Blockchain           │
+│  │                                                                 │
+│  ├─ 🔗 SMART CONTRACT (Blockchain)                                │
+│  │  └─ fabric-network\chaincode\medicalRecords.js               │
+│  │                                                                 │
+│  ├─ 🗄️ DATABASE                                                    │
+│  │  └─ database\schema.sql     ← MySQL database                  │
+│  │                                                                 │
+│  └─ 🚀 QUICK START SCRIPTS                                        │
+│     ├─ start.bat               ← Run website                      │
+│     └─ setup-database.bat      ← Setup database                   │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│  ⚡ CURRENT STATUS:                                                │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ✅ Dependencies installed (npm packages)                         │
+│  ✅ Code complete (all files created)                             │
+│  ✅ Smart contract ready                                          │
+│  ⚠️  MySQL database needs setup                                   │
+│                                                                    │
+│  ➡️  Next: Run setup-database.bat                                 │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│  🎯 QUICK TEST WORKFLOW:                                           │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  1. Setup database (setup-database.bat)                           │
+│  2. Start server (start.bat)                                      │
+│  3. Open http://localhost:3000                                    │
+│  4. Login as patient                                              │
+│  5. Grant permission to a doctor                                  │
+│  6. Logout, login as doctor                                       │
+│  7. Create a medical record                                       │
+│  8. View the record with hash validation ✓                        │
+│  9. Check audit logs                                              │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════╗
+║  💡 IMPORTANT NOTES:                                               ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  • The smart contract is ALREADY INTEGRATED in the backend        ║
+║  • The website works WITHOUT Hyperledger Fabric initially         ║
+║  • Records are stored in MySQL with hash validation               ║
+║  • Blockchain can be added later (see fabric-network/README.md)   ║
+║  • All features work including hash validation & audit logs       ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+📖 For detailed help, see: HOW_TO_RUN.md or SETUP_GUIDE.md

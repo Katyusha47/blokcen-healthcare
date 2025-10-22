@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.log
+.DS_Store
+fabric-network/wallet/
+fabric-network/keystore/
