@@ -551,8 +551,10 @@ peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.exa
 ### Test 2: Create Medical Record
 
 ```bash
-peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" -C healthcarechannel -n healthcare --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" -c '{"function":"createMedicalRecord","Args":["{\"recordId\":\"REC001\",\"patientId\":\"1\",\"doctorId\":\"2\",\"recordHash\":\"abc123hash\",\"timestamp\":\"2025-11-04T10:00:00Z\",\"action\":\"create\"}"]}'
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" -C healthcarechannel -n healthcare --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" -c '{"function":"createMedicalRecord","Args":["{\"recordId\":\"REC001\",\"patientId\":\"1\",\"doctorId\":\"2\",\"recordHash\":\"abc123hash\",\"timestamp\":\"2025-11-04T10:00:00Z\",\"action\":\"create\"}"]}'
 ```
+
+**Important:** Wait 2-3 seconds after creating the record before querying it, to allow the transaction to be committed to the blockchain.
 
 ### Test 3: Query Medical Record
 
@@ -565,6 +567,47 @@ peer chaincode query -C healthcarechannel -n healthcare -c '{"function":"queryMe
 ```bash
 peer chaincode query -C healthcarechannel -n healthcare -c '{"function":"getRecordHistory","Args":["REC001"]}'
 ```
+
+### Troubleshooting Test Failures
+
+**If you get "Medical record does not exist" error:**
+
+1. **Check if Test 2 (create) was successful:**
+   - Look for "status:200" in the output
+   - If you see any errors, the record wasn't created
+
+2. **Verify chaincode logs:**
+   ```bash
+   # Find the chaincode container
+   docker ps | grep healthcare
+   
+   # View logs (replace container name with actual name)
+   docker logs dev-peer0.org1.example.com-healthcare_1.0-xxxxx
+   ```
+
+3. **Check if both peers endorsed the transaction:**
+   - The invoke command MUST have both `--peerAddresses` (localhost:7051 and localhost:9051)
+   - If only one peer is specified, the transaction may fail
+
+4. **Re-run Test 2 with proper command:**
+   ```bash
+   # Make sure you're using the CORRECTED Test 2 command above
+   # with BOTH peer addresses
+   ```
+
+5. **Query all records to see what exists:**
+   ```bash
+   peer chaincode query -C healthcarechannel -n healthcare -c '{"function":"queryAllMedicalRecords","Args":[]}'
+   ```
+
+6. **Try with a different record ID:**
+   ```bash
+   # Create with different ID
+   peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" -C healthcarechannel -n healthcare --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" -c '{"function":"createMedicalRecord","Args":["{\"recordId\":\"REC002\",\"patientId\":\"1\",\"doctorId\":\"2\",\"recordHash\":\"xyz789hash\",\"timestamp\":\"2025-11-05T10:00:00Z\",\"action\":\"create\"}"]}'
+   
+   # Wait 2-3 seconds, then query
+   peer chaincode query -C healthcarechannel -n healthcare -c '{"function":"queryMedicalRecord","Args":["REC002"]}'
+   ```
 
 ## Part 8: Connect Your Node.js Application
 
