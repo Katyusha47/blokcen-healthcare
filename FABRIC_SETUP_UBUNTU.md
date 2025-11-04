@@ -551,33 +551,19 @@ peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.exa
 ### Test 2: Create Medical Record
 
 ```bash
-peer chaincode invoke -o localhost:7050 \
-  --ordererTLSHostnameOverride orderer.example.com \
-  --tls \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
-  -C healthcarechannel \
-  -n healthcare \
-  --peerAddresses localhost:7051 \
-  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
-  -c '{"function":"createMedicalRecord","Args":["{\"recordId\":\"REC001\",\"patientId\":\"1\",\"doctorId\":\"2\",\"recordHash\":\"abc123hash\",\"timestamp\":\"2025-11-04T10:00:00Z\",\"action\":\"create\"}"]}'
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" -C healthcarechannel -n healthcare --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" -c '{"function":"createMedicalRecord","Args":["{\"recordId\":\"REC001\",\"patientId\":\"1\",\"doctorId\":\"2\",\"recordHash\":\"abc123hash\",\"timestamp\":\"2025-11-04T10:00:00Z\",\"action\":\"create\"}"]}'
 ```
 
 ### Test 3: Query Medical Record
 
 ```bash
-peer chaincode query \
-  -C healthcarechannel \
-  -n healthcare \
-  -c '{"function":"queryMedicalRecord","Args":["REC001"]}'
+peer chaincode query -C healthcarechannel -n healthcare -c '{"function":"queryMedicalRecord","Args":["REC001"]}'
 ```
 
 ### Test 4: Get Record History
 
 ```bash
-peer chaincode query \
-  -C healthcarechannel \
-  -n healthcare \
-  -c '{"function":"getRecordHistory","Args":["REC001"]}'
+peer chaincode query -C healthcarechannel -n healthcare -c '{"function":"getRecordHistory","Args":["REC001"]}'
 ```
 
 ## Part 8: Connect Your Node.js Application
