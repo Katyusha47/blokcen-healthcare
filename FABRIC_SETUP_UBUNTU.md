@@ -627,10 +627,30 @@ npm install fabric-network@2.2 fabric-ca-client@2.2
 
 # Setup MySQL on Ubuntu
 sudo apt install mysql-server
-sudo mysql_secure_installation
 
-# Import database schema
+# IMPORTANT: Fix MySQL root password issue first
+# MySQL 8.0 uses auth_socket by default, which causes issues with mysql_secure_installation
+
+# Step 1: Connect to MySQL as root (without password)
+sudo mysql
+
+# Step 2: Inside MySQL prompt, run these commands:
+# ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'YourStrongPassword123!';
+# FLUSH PRIVILEGES;
+# EXIT;
+
+# Now run mysql_secure_installation (it will work properly now)
+# When prompted for password, enter: YourStrongPassword123!
+# Answer the prompts:
+#   - Change root password? N (you just set it)
+#   - Remove anonymous users? Y
+#   - Disallow root login remotely? Y
+#   - Remove test database? Y
+#   - Reload privilege tables? Y
+
+# Import database schema (use the password you set above)
 mysql -u root -p < database/schema.sql
+# Enter password: YourStrongPassword123!
 
 # Create .env file
 nano .env
@@ -642,44 +662,344 @@ npm start
 
 ### Option 2: Connect from Windows to VM
 
-**On Ubuntu VM:**
+This option allows you to run your Node.js application on Windows while connecting to the Fabric network running on Ubuntu VM.
 
-1. Get VM IP address:
+#### Step 1: Identify Your VM IP Address
+
+**On Ubuntu VM terminal, run:**
+
 ```bash
 ip addr show
-# Look for inet 192.168.x.x
 ```
 
-2. Configure port forwarding (if using NAT):
-   - VirtualBox → Settings → Network → Port Forwarding
-   - Add rules:
-     - 7051 → 7051 (Peer)
-     - 7050 → 7050 (Orderer)
-     - 9051 → 9051 (Peer2)
+**Look for your main network interface (usually `enp0s3` or `eth0`):**
 
-3. Copy certificates to Windows:
+- **If you see `inet 192.168.x.x`** → This is a Bridged network (best for direct connection)
+- **If you see `inet 10.0.2.x`** → This is NAT network (requires port forwarding)
+
+**Example output:**
+```
+2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
+   inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic enp0s3
+```
+
+In this example, your VM IP is **`10.0.2.15`** (NAT network).
+
+#### Step 2: Configure Port Forwarding (Required for NAT Network)
+
+**If your VM IP is `10.0.2.x` (NAT), you MUST configure port forwarding:**
+
+1. **Shut down your Ubuntu VM** (Power Off, not Save State)
+
+2. **Open VirtualBox Manager**
+
+3. **Right-click your Ubuntu VM → Settings**
+
+4. **Go to Network → Adapter 1 → Advanced → Port Forwarding**
+
+5. **Click the "+" icon to add new rules:**
+
+   Add these port forwarding rules:
+
+   | Name | Protocol | Host IP | Host Port | Guest IP | Guest Port |
+   |------|----------|---------|-----------|----------|------------|
+   | Peer1 | TCP | 127.0.0.1 | 7051 | 10.0.2.15 | 7051 |
+   | Orderer | TCP | 127.0.0.1 | 7050 | 10.0.2.15 | 7050 |
+   | Peer2 | TCP | 127.0.0.1 | 9051 | 10.0.2.15 | 9051 |
+   | NodeApp | TCP | 127.0.0.1 | 3000 | 10.0.2.15 | 3000 |
+   | MySQL | TCP | 127.0.0.1 | 3306 | 10.0.2.15 | 3306 |
+
+   **Note:** Replace `10.0.2.15` with your actual VM IP if different.
+
+6. **Click OK to save**
+
+7. **Start your Ubuntu VM again**
+
+**If your VM IP is `192.168.x.x` (Bridged), skip port forwarding - you can connect directly!**
+
+#### Step 3: Copy Fabric Certificates from VM to Windows
+
+**On Ubuntu VM terminal:**
+
 ```bash
-# On Ubuntu, create a tarball
+# Navigate to test-network directory
 cd ~/fabric/fabric-samples/test-network
+
+# Create a tarball of all certificates
 tar -czf organizations.tar.gz organizations/
 
-# Transfer to Windows using SCP or shared folder
+# Check the file was created
+ls -lh organizations.tar.gz
 ```
 
-**On Windows:**
+**Transfer the file to Windows using one of these methods:**
 
-Update connection profile with VM IP address:
+**Method A: Using VirtualBox Shared Folder (Easiest)**
+
+1. On VirtualBox: VM → Devices → Shared Folders → Shared Folders Settings
+2. Click "+" icon to add new shared folder
+3. Folder Path: `F:\laragon\www\blokcen` (your Windows folder)
+4. Folder Name: `blokcen_shared`
+5. Check "Auto-mount" and "Make Permanent"
+6. Click OK
+
+On Ubuntu VM:
+```bash
+# Copy the tarball to shared folder
+cp organizations.tar.gz /media/sf_blokcen_shared/
+```
+
+**Method B: Using SCP from Windows (if SSH is enabled)**
+
+On Windows PowerShell:
+```powershell
+# If using NAT with port forwarding, SSH to localhost:22
+scp -P 22 yourusername@localhost:~/fabric/fabric-samples/test-network/organizations.tar.gz F:\laragon\www\blokcen\
+
+# If using Bridged network with direct IP
+scp yourusername@10.0.2.15:~/fabric/fabric-samples/test-network/organizations.tar.gz F:\laragon\www\blokcen\
+```
+
+**Method C: Manual Copy (if shared folder works)**
+
+Just use File Explorer to copy from the shared folder.
+
+#### Step 4: Extract Certificates on Windows
+
+**On Windows PowerShell:**
+
+```powershell
+cd F:\laragon\www\blokcen
+
+# Extract the tarball (requires 7-Zip or similar)
+# If you don't have tar command, use 7-Zip GUI or install Git Bash
+
+# Using Git Bash or WSL:
+tar -xzf organizations.tar.gz
+
+# This creates: F:\laragon\www\blokcen\organizations\
+```
+
+#### Step 5: Update Connection Profile on Windows
+
+**Edit your `fabric-network/connection-profile.json` file:**
+
+```powershell
+# Open in your editor
+code F:\laragon\www\blokcen\fabric-network\connection-profile.json
+```
+
+**Update the connection profile with correct addresses:**
+
+**If using NAT with port forwarding (10.0.2.x IP):**
+
+```json
+{
+  "name": "healthcare-network",
+  "version": "1.0.0",
+  "client": {
+    "organization": "Org1",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        },
+        "orderer": "300"
+      }
+    }
+  },
+  "organizations": {
+    "Org1": {
+      "mspid": "Org1MSP",
+      "peers": ["peer0.org1.example.com"],
+      "certificateAuthorities": ["ca.org1.example.com"]
+    }
+  },
+  "peers": {
+    "peer0.org1.example.com": {
+      "url": "grpcs://localhost:7051",
+      "tlsCACerts": {
+        "path": "organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org1.example.com",
+        "hostnameOverride": "peer0.org1.example.com"
+      }
+    }
+  },
+  "orderers": {
+    "orderer.example.com": {
+      "url": "grpcs://localhost:7050",
+      "tlsCACerts": {
+        "path": "organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "orderer.example.com",
+        "hostnameOverride": "orderer.example.com"
+      }
+    }
+  },
+  "certificateAuthorities": {
+    "ca.org1.example.com": {
+      "url": "https://localhost:7054",
+      "caName": "ca-org1",
+      "tlsCACerts": {
+        "path": "organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem"
+      },
+      "httpOptions": {
+        "verify": false
+      }
+    }
+  }
+}
+```
+
+**If using Bridged network (192.168.x.x IP), replace `localhost` with your VM IP:**
 
 ```json
 {
   "peers": {
     "peer0.org1.example.com": {
-      "url": "grpcs://VM_IP_ADDRESS:7051",
+      "url": "grpcs://192.168.1.100:7051",
+      ...
+    }
+  },
+  "orderers": {
+    "orderer.example.com": {
+      "url": "grpcs://192.168.1.100:7050",
       ...
     }
   }
 }
 ```
+
+#### Step 6: Update Fabric Configuration in Your Application
+
+**Edit `config/fabric.js` on Windows:**
+
+```javascript
+const path = require('path');
+
+module.exports = {
+  channelName: 'healthcarechannel',
+  chaincodeName: 'healthcare',
+  connectionProfile: path.resolve(__dirname, '../fabric-network/connection-profile.json'),
+  
+  // Update certificate paths to point to extracted organizations folder
+  org1: {
+    mspId: 'Org1MSP',
+    walletPath: path.resolve(__dirname, '../wallet'),
+    // Path to admin user cert
+    certPath: path.resolve(__dirname, '../organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts'),
+    // Path to admin user private key
+    keyPath: path.resolve(__dirname, '../organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore')
+  }
+};
+```
+
+#### Step 7: Test Connection from Windows
+
+**On Windows PowerShell:**
+
+```powershell
+cd F:\laragon\www\blokcen
+
+# Install dependencies if not already installed
+npm install
+
+# Install Fabric SDK
+npm install fabric-network@2.2 fabric-ca-client@2.2
+
+# Test connection with a simple script
+node -e "const { Gateway } = require('fabric-network'); console.log('Fabric SDK loaded successfully');"
+```
+
+#### Step 8: Test Network Connectivity
+
+**On Windows PowerShell, test if ports are accessible:**
+
+```powershell
+# Test Peer connection (should timeout if working, error if port closed)
+Test-NetConnection -ComputerName localhost -Port 7051
+
+# Test Orderer connection
+Test-NetConnection -ComputerName localhost -Port 7050
+
+# Test Peer2 connection
+Test-NetConnection -ComputerName localhost -Port 9051
+```
+
+**Expected output:** `TcpTestSucceeded : True` for each port
+
+#### Step 9: Start Your Application on Windows
+
+```powershell
+cd F:\laragon\www\blokcen
+
+# Make sure MySQL is running on Windows (Laragon)
+# Start Laragon if not running
+
+# Start your Node.js application
+npm start
+```
+
+Your application should now connect to the Fabric network running on Ubuntu VM!
+
+#### Troubleshooting Connection Issues
+
+**Issue: "Failed to connect to peer"**
+
+1. **Check if port forwarding is correct:**
+   ```powershell
+   # On Windows
+   Test-NetConnection localhost -Port 7051
+   ```
+
+2. **Check if Fabric network is running on Ubuntu:**
+   ```bash
+   # On Ubuntu VM
+   docker ps
+   # Should show peer0.org1.example.com, peer0.org2.example.com, orderer.example.com
+   ```
+
+3. **Check Ubuntu firewall:**
+   ```bash
+   # On Ubuntu VM
+   sudo ufw status
+   
+   # If active, allow the ports
+   sudo ufw allow 7050
+   sudo ufw allow 7051
+   sudo ufw allow 9051
+   ```
+
+**Issue: "Certificate validation failed"**
+
+- Make sure certificate paths in connection-profile.json are correct
+- Paths should be relative to your project root: `organizations/peerOrganizations/...`
+
+**Issue: "Timeout connecting to peer"**
+
+- Increase timeout values in connection-profile.json
+- Check if VM is accessible from Windows: `ping localhost` (for NAT) or `ping 192.168.x.x` (for Bridged)
+
+#### Summary - What You Need
+
+**Your VM IP address:** `10.0.2.15` (from your screenshot)
+
+**Network Type:** NAT (10.0.2.x means NAT network)
+
+**Required Actions:**
+1. ✅ Configure port forwarding in VirtualBox (7050, 7051, 9051)
+2. ✅ Copy certificates from VM to Windows
+3. ✅ Update connection-profile.json to use `localhost` (because of port forwarding)
+4. ✅ Test connectivity from Windows
+5. ✅ Run your application on Windows
+
+**Connection URLs (for NAT with port forwarding):**
+- Peer: `grpcs://localhost:7051`
+- Orderer: `grpcs://localhost:7050`
+- Peer2: `grpcs://localhost:9051`
 
 ## Part 9: Automated Setup Script
 
