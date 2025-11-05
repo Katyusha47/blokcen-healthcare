@@ -1,5 +1,4 @@
 const { Gateway, Wallets } = require('fabric-network');
-const FabricCAServices = require('fabric-ca-client');
 const path = require('path');
 const fs = require('fs');
 
@@ -9,22 +8,39 @@ class FabricConnection {
     this.wallet = null;
     this.network = null;
     this.contract = null;
+    this.isConnected = false;
   }
 
   async initialize() {
     try {
+      console.log('🔗 Initializing Fabric connection...');
+
       // Load connection profile
       const ccpPath = path.resolve(__dirname, '..', 'fabric-network', 'connection-profile.json');
-      const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
+      
+      if (!fs.existsSync(ccpPath)) {
+        console.log('⚠️  Connection profile not found. Blockchain features disabled.');
+        return false;
+      }
+
+      const ccpJSON = fs.readFileSync(ccpPath, 'utf8');
+      const ccp = JSON.parse(ccpJSON);
 
       // Create wallet
       const walletPath = path.join(__dirname, '..', 'fabric-network', 'wallet');
       this.wallet = await Wallets.newFileSystemWallet(walletPath);
 
-      // Check if identity exists
-      const identity = await this.wallet.get('admin');
+      // Check if identity exists, if not create one
+      let identity = await this.wallet.get('admin');
+      
       if (!identity) {
-        console.log('⚠️  Admin identity not found in wallet. Please enroll admin first.');
+        console.log('⚠️  Admin identity not found. Creating from certificates...');
+        await this.enrollAdmin();
+        identity = await this.wallet.get('admin');
+      }
+
+      if (!identity) {
+        console.log('❌ Could not create admin identity. Blockchain features disabled.');
         return false;
       }
 
@@ -37,48 +53,96 @@ class FabricConnection {
       });
 
       // Get network and contract
-      this.network = await this.gateway.getNetwork(process.env.CHANNEL_NAME);
-      this.contract = this.network.getContract(process.env.CHAINCODE_NAME);
+      this.network = await this.gateway.getNetwork('healthcarechannel');
+      this.contract = this.network.getContract('healthcare');
 
-      console.log('✅ Hyperledger Fabric Connected Successfully');
+      this.isConnected = true;
+      console.log('✅ Connected to Fabric network successfully');
       return true;
+
     } catch (error) {
-      console.error('❌ Fabric Connection Error:', error.message);
+      console.error('❌ Fabric connection error:', error.message);
+      this.isConnected = false;
+      return false;
+    }
+  }
+
+  async enrollAdmin() {
+    try {
+      // Import admin credentials from test-network
+      const credPath = path.join(__dirname, '..', 'organizations', 'peerOrganizations', 
+                                  'org1.example.com', 'users', 'Admin@org1.example.com');
+      
+      const certificate = fs.readFileSync(path.join(credPath, 'msp', 'signcerts', 'cert.pem')).toString();
+      const keyPath = path.join(credPath, 'msp', 'keystore');
+      const keyFiles = fs.readdirSync(keyPath);
+      const privateKey = fs.readFileSync(path.join(keyPath, keyFiles[0])).toString();
+
+      const identity = {
+        credentials: {
+          certificate: certificate,
+          privateKey: privateKey,
+        },
+        mspId: 'Org1MSP',
+        type: 'X.509',
+      };
+
+      await this.wallet.put('admin', identity);
+      console.log('✅ Admin identity enrolled successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error enrolling admin:', error.message);
       return false;
     }
   }
 
   async submitTransaction(functionName, ...args) {
     try {
-      if (!this.contract) {
-        await this.initialize();
+      if (!this.isConnected || !this.contract) {
+        console.log('⚠️  Fabric not connected. Skipping blockchain transaction.');
+        return null;
       }
+
       const result = await this.contract.submitTransaction(functionName, ...args);
-      return JSON.parse(result.toString());
+      return result.toString();
+
     } catch (error) {
-      console.error('Transaction Error:', error);
+      console.error(`❌ Error submitting transaction ${functionName}:`, error.message);
       throw error;
     }
   }
 
   async evaluateTransaction(functionName, ...args) {
     try {
-      if (!this.contract) {
-        await this.initialize();
+      if (!this.isConnected || !this.contract) {
+        console.log('⚠️  Fabric not connected. Skipping blockchain query.');
+        return null;
       }
+
       const result = await this.contract.evaluateTransaction(functionName, ...args);
-      return JSON.parse(result.toString());
+      return result.toString();
+
     } catch (error) {
-      console.error('Query Error:', error);
+      console.error(`❌ Error evaluating transaction ${functionName}:`, error.message);
       throw error;
     }
   }
 
   async disconnect() {
-    if (this.gateway) {
-      await this.gateway.disconnect();
+    try {
+      if (this.gateway) {
+        await this.gateway.disconnect();
+        this.isConnected = false;
+        console.log('✅ Disconnected from Fabric network');
+      }
+    } catch (error) {
+      console.error('❌ Error disconnecting:', error.message);
     }
   }
 }
 
-module.exports = new FabricConnection();
+// Create singleton instance
+const fabricConnection = new FabricConnection();
+
+module.exports = fabricConnection;

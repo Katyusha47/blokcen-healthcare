@@ -361,10 +361,7 @@ export FABRIC_CFG_PATH=$PWD/../config/
 export PATH=$PATH:~/fabric/fabric-samples/bin
 
 # Package chaincode
-peer lifecycle chaincode package healthcare.tar.gz \
-  --path ../chaincode/healthcare \
-  --lang node \
-  --label healthcare_1.0
+peer lifecycle chaincode package healthcare.tar.gz --path ../chaincode/healthcare --lang node --label healthcare_1.0
 
 # Verify the package was created
 ls -la healthcare.tar.gz
@@ -465,15 +462,7 @@ export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.examp
 export CORE_PEER_ADDRESS=localhost:7051
 
 # Approve
-peer lifecycle chaincode approveformyorg -o localhost:7050 \
-  --ordererTLSHostnameOverride orderer.example.com \
-  --channelID healthcarechannel \
-  --name healthcare \
-  --version 1.0 \
-  --package-id $CC_PACKAGE_ID \
-  --sequence 1 \
-  --tls \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID healthcarechannel --name healthcare --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 ```
 
 ### Step 7: Approve Chaincode for Org2
@@ -486,28 +475,13 @@ export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.examp
 export CORE_PEER_ADDRESS=localhost:9051
 
 # Approve
-peer lifecycle chaincode approveformyorg -o localhost:7050 \
-  --ordererTLSHostnameOverride orderer.example.com \
-  --channelID healthcarechannel \
-  --name healthcare \
-  --version 1.0 \
-  --package-id $CC_PACKAGE_ID \
-  --sequence 1 \
-  --tls \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID healthcarechannel --name healthcare --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 ```
 
 ### Step 8: Check Commit Readiness
 
 ```bash
-peer lifecycle chaincode checkcommitreadiness \
-  --channelID healthcarechannel \
-  --name healthcare \
-  --version 1.0 \
-  --sequence 1 \
-  --tls \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
-  --output json
+peer lifecycle chaincode checkcommitreadiness --channelID healthcarechannel --name healthcare --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --output json
 
 # Should show both Org1MSP and Org2MSP as true
 ```
@@ -515,27 +489,13 @@ peer lifecycle chaincode checkcommitreadiness \
 ### Step 9: Commit Chaincode
 
 ```bash
-peer lifecycle chaincode commit -o localhost:7050 \
-  --ordererTLSHostnameOverride orderer.example.com \
-  --channelID healthcarechannel \
-  --name healthcare \
-  --version 1.0 \
-  --sequence 1 \
-  --tls \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
-  --peerAddresses localhost:7051 \
-  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
-  --peerAddresses localhost:9051 \
-  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID healthcarechannel --name healthcare --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
 ```
 
 ### Step 10: Verify Chaincode is Committed
 
 ```bash
-peer lifecycle chaincode querycommitted \
-  --channelID healthcarechannel \
-  --name healthcare \
-  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+peer lifecycle chaincode querycommitted --channelID healthcarechannel --name healthcare --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
 
 # Should show: Version: 1.0, Sequence: 1, Endorsement plugin: escc, Validation plugin: vscc
 ```

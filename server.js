@@ -18,6 +18,9 @@ const recordRoutes = require('./routes/recordRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 
+// Initialize Fabric connection
+const fabricConnection = require('./config/fabric');
+
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/records', recordRoutes);
@@ -41,7 +44,17 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  console.log(`� Environment: ${process.env.NODE_ENV}`);
+  
+  // Initialize Fabric connection
+  console.log('🔗 Initializing Fabric connection...');
+  const fabricConnected = await fabricConnection.initialize();
+  
+  if (fabricConnected) {
+    console.log('✅ Fabric network connected successfully');
+  } else {
+    console.log('⚠️  Fabric not connected. App will run without blockchain features.');
+  }
 });
