@@ -1381,13 +1381,3 @@ peer lifecycle chaincode commit \
 
 ---
 
-## Kesimpulan BAB III
-
-Bab ini telah menjelaskan perancangan sistem healthcare blockchain secara mendetail, meliputi:
-
-1. **Deskripsi Sistem**: Gambaran umum, tujuan, ruang lingkup, dan aktor sistem
-2. **Arsitektur Sistem**: Struktur tiga lapis dengan blockchain layer dan alur komunikasi data
-3. **Diagram Use Case/Flowchart**: Visualisasi alur kerja sistem dan interaksi pengguna
-4. **Perancangan Smart Contract**: Struktur, fungsi, pseudocode, dan implementasi kode lengkap
-
-Perancangan sistem ini akan menjadi blueprint untuk implementasi pada BAB IV.
