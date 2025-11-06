@@ -91,16 +91,30 @@ Sistem ini melibatkan tiga jenis aktor utama:
 - Bcrypt untuk password hashing
 - SHA-256 untuk data integrity hashing
 
-**Blockchain:**
+**Blockchain Platform:**
 - Hyperledger Fabric v2.5.0
-- Node.js Chaincode
-- Fabric SDK for Node.js v2.2
+- Node.js Chaincode (Smart Contract)
+- Fabric SDK for Node.js v2.2.20
+- Fabric CA (Certificate Authority) v1.5.5
 - CouchDB sebagai state database
 
-**Development Environment:**
-- Ubuntu 22.04 LTS (Virtual Machine)
-- Docker untuk containerization
-- Git untuk version control
+**Development Tools:**
+- Visual Studio Code - IDE untuk coding
+- Ubuntu 22.04 LTS (Virtual Machine) - Environment development blockchain
+- VirtualBox - Virtualisasi untuk menjalankan Ubuntu
+- Docker & Docker Compose - Containerization untuk Fabric network
+- Git - Version control
+- MySQL Workbench - Database management
+- Postman - API testing (optional)
+- Terminal/PowerShell - Command line interface
+
+**Package Manager:**
+- npm (Node Package Manager) - Dependency management
+- nodemon - Auto-restart development server
+
+**Testing Tools:**
+- curl - Command line HTTP testing
+- Browser Developer Tools - Frontend debugging
 
 ---
 
