@@ -106,3 +106,52 @@ setGlobals 1
 ```bash
 peer chaincode query -C healthcarechannel -n healthcare -c '{"Args":["queryAllMedicalRecords"]}'
 ```
+
+# test
+# On Lubuntu:
+
+# 1. Check if chaincode is actually committed
+```bash
+cd ~/fabric/fabric-samples/test-network
+. ./scripts/envVar.sh
+setGlobals 1
+```
+
+```bash
+peer lifecycle chaincode querycommitted -C healthcarechannel
+```
+
+# This should show "healthcare" chaincode
+# If NOT showing, chaincode wasn't deployed!
+
+# Check your chaincode file
+```bash
+cat ~/blokcen-healthcare/fabric-network/chaincode/medicalRecords.js | grep "async query"
+```
+
+# Make sure the function is named exactly: queryAllMedicalRecords
+
+```bash
+cd ~/fabric/fabric-samples/test-network
+```
+
+# 1. Check where your chaincode actually is
+```bash
+ls -la ~/blokcen-healthcare/fabric-network/chaincode/
+```
+
+# Should show medicalRecords.js and package.json
+
+# 2. Redeploy chaincode with ABSOLUTE path
+```bash
+./network.sh deployCC -ccn healthcare -ccp ~/blokcen-healthcare/fabric-network/chaincode -ccl javascript -c healthcarechannel
+```
+# Wait for it to finish completely (can take 30-60 seconds)
+
+# 3. Verify deployment
+```bash
+peer lifecycle chaincode querycommitted -C healthcarechannel -n healthcare
+```
+# Should show:
+# Committed chaincode definition for chaincode 'healthcare' on channel 'healthcarechannel':
+# Version: 1.0, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc
