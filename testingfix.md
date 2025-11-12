@@ -369,3 +369,95 @@ nano ~/blokcen-healthcare/fabric-network/connection-profile.json
   }
 }
 ```
+
+```bash
+nano ~/blokcen-healthcare/config/fabric.js
+```
+Add this function after the enrollAdmin() function:
+
+```bash
+loadConnectionProfile() {
+  const ccpPath = path.resolve(__dirname, '..', 'fabric-network', 'connection-profile.json');
+  const ccpJSON = fs.readFileSync(ccpPath, 'utf8');
+  const ccp = JSON.parse(ccpJSON);
+
+  // Load TLS certificates
+  const orgPath = path.resolve(__dirname, '..', 'organizations');
+  
+  // Load peer0.org1 TLS cert
+  const peer1TLSPath = path.join(orgPath, 'peerOrganizations', 'org1.example.com', 'peers', 'peer0.org1.example.com', 'tls', 'ca.crt');
+  if (fs.existsSync(peer1TLSPath)) {
+    ccp.peers['peer0.org1.example.com'].tlsCACerts = {
+      pem: fs.readFileSync(peer1TLSPath).toString()
+    };
+  }
+
+  // Load peer0.org2 TLS cert
+  const peer2TLSPath = path.join(orgPath, 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt');
+  if (fs.existsSync(peer2TLSPath)) {
+    ccp.peers['peer0.org2.example.com'].tlsCACerts = {
+      pem: fs.readFileSync(peer2TLSPath).toString()
+    };
+  }
+
+  // Load orderer TLS cert
+  const ordererTLSPath = path.join(orgPath, 'ordererOrganizations', 'example.com', 'orderers', 'orderer.example.com', 'tls', 'ca.crt');
+  if (fs.existsSync(ordererTLSPath)) {
+    ccp.orderers['orderer.example.com'].tlsCACerts = {
+      pem: fs.readFileSync(ordererTLSPath).toString()
+    };
+  }
+
+  return ccp;
+}
+```
+
+Then update the initialize() function to use it:
+
+```bash
+async initialize() {
+  try {
+    console.log('🔄 Initializing Fabric connection...');
+    
+    // Load connection profile with TLS certs
+    const ccp = this.loadConnectionProfile();
+
+    // Create wallet
+    const walletPath = path.join(process.cwd(), 'wallet');
+    this.wallet = await Wallets.newFileSystemWallet(walletPath);
+
+    // Enroll admin if not exists
+    const adminExists = await this.wallet.get('admin');
+    if (!adminExists) {
+      console.log('📝 Enrolling admin...');
+      await this.enrollAdmin();
+    }
+
+    // Connect to gateway
+    this.gateway = new Gateway();
+    await this.gateway.connect(ccp, {
+      wallet: this.wallet,
+      identity: 'admin',
+      discovery: { 
+        enabled: true, 
+        asLocalhost: true
+      }
+    });
+
+    console.log('✅ Gateway connected');
+
+    // Get network and contract
+    this.network = await this.gateway.getNetwork(process.env.FABRIC_CHANNEL || 'healthcarechannel');
+    this.contract = this.network.getContract(process.env.FABRIC_CHAINCODE || 'healthcare');
+    
+    this.isConnected = true;
+    console.log('✅ Connected to Fabric network successfully');
+    return true;
+
+  } catch (error) {
+    console.error('❌ Fabric initialization error:', error.message);
+    this.isConnected = false;
+    return false;
+  }
+}
+```
