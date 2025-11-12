@@ -72,3 +72,37 @@ docker exec peer0.org1.example.com peer channel list
 
 # Check chaincode
 docker exec peer0.org1.example.com peer lifecycle chaincode querycommitted -C healthcarechannel
+
+# On Lubuntu, in test-network directory:
+cd ~/fabric/fabric-samples/test-network
+
+# Set CORRECT environment variables with TLS ENABLED
+```bash
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+export FABRIC_CFG_PATH=${PWD}/../config/
+```
+
+# Now try the query with --tls flag
+```bash
+peer chaincode query -C healthcarechannel -n healthcare -c '{"Args":["queryAllMedicalRecords"]}' --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+```
+
+# Much easier - use the setEnv script
+```bash
+cd ~/fabric/fabric-samples/test-network
+```
+
+# Source the environment for Org1
+```bash
+. ./scripts/envVar.sh
+setGlobals 1
+```
+
+# Now query
+```bash
+peer chaincode query -C healthcarechannel -n healthcare -c '{"Args":["queryAllMedicalRecords"]}'
+```
