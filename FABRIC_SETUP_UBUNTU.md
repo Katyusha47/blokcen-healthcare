@@ -324,6 +324,21 @@ cd ~/fabric/fabric-samples/chaincode/healthcare
 npm install
 cd ~/fabric/fabric-samples/test-network
 ```
+### Faster ways
+
+```bash
+# 1. First, bring down the network
+cd ~/fabric/fabric-samples/test-network
+./network.sh down
+
+# 2. Start network with YOUR channel name
+./network.sh up createChannel -c healthcarechannel -ca
+
+# 3. Deploy chaincode to the CORRECT channel
+./network.sh deployCC -ccn healthcare -ccp ../chaincode/healthcare -ccl javascript -c healthcarechannel
+
+# Note the -c healthcarechannel flag! 
+```
 
 ### Step 1.5: Set Fabric Config Path (IMPORTANT!)
 
