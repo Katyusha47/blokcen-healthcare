@@ -155,3 +155,107 @@ peer lifecycle chaincode querycommitted -C healthcarechannel -n healthcare
 # Should show:
 # Committed chaincode definition for chaincode 'healthcare' on channel 'healthcarechannel':
 # Version: 1.0, Sequence: 1, Endorsement Plugin: escc, Validation Plugin: vscc
+
+
+# fixed
+
+```bash
+nano ~/blokcen-healthcare/fabric-network/connection-profile.json
+```
+
+```bash
+{
+  "name": "healthcare-network",
+  "version": "1.0.0",
+  "client": {
+    "organization": "Org1",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        },
+        "orderer": "300"
+      }
+    }
+  },
+  "organizations": {
+    "Org1": {
+      "mspid": "Org1MSP",
+      "peers": ["peer0.org1.example.com"],
+      "certificateAuthorities": ["ca.org1.example.com"]
+    }
+  },
+  "peers": {
+    "peer0.org1.example.com": {
+      "url": "grpcs://localhost:7051",
+      "tlsCACerts": {
+        "path": "organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org1.example.com",
+        "hostnameOverride": "peer0.org1.example.com"
+      }
+    }
+  },
+  "certificateAuthorities": {
+    "ca.org1.example.com": {
+      "url": "https://localhost:7054",
+      "caName": "ca-org1",
+      "tlsCACerts": {
+        "path": "organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem"
+      },
+      "httpOptions": {
+        "verify": false
+      }
+    }
+  },
+  "orderers": {
+    "orderer.example.com": {
+      "url": "grpcs://localhost:7050",
+      "tlsCACerts": {
+        "path": "organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "orderer.example.com",
+        "hostnameOverride": "orderer.example.com"
+      }
+    }
+  },
+  "channels": {
+    "healthcarechannel": {
+      "orderers": ["orderer.example.com"],
+      "peers": {
+        "peer0.org1.example.com": {
+          "endorsingPeer": true,
+          "chaincodeQuery": true,
+          "ledgerQuery": true,
+          "eventSource": true
+        }
+      }
+    }
+  }
+}
+```
+
+```bash
+# 1. Test if chaincode works with correct TLS settings
+cd ~/fabric/fabric-samples/test-network
+. ./scripts/envVar.sh
+setGlobals 1
+peer chaincode query -C healthcarechannel -n healthcare -c '{"Args":["queryAllMedicalRecords"]}'
+
+# 2. If that works, update your app's connection profile (see above)
+
+# 3. Delete wallet
+cd ~/blokcen-healthcare
+rm -rf wallet
+
+# 4. Update fabric.js to use TLS
+nano config/fabric.js
+
+# In the gateway.connect section, make sure it has:
+# discovery: { enabled: true, asLocalhost: true }
+
+# 5. Start your app
+npm start
+```
