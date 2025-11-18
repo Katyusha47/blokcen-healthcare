@@ -110,6 +110,15 @@ class FabricConnection {
             console.log(`🔐 Orderer ${o} TLS PEM head:`, ord.tlsCACerts.pem.split('\n')[0]);
           }
         });
+        // Also print url for each peer and orderer to diagnose missing url errors
+        Object.keys(ccp.peers || {}).forEach((p) => {
+          const peer = ccp.peers[p];
+          console.log(`🔎 CCP Peer entry: ${p} url:`, peer && peer.url ? peer.url : '(MISSING)');
+        });
+        Object.keys(ccp.orderers || {}).forEach((o) => {
+          const ord = ccp.orderers[o];
+          console.log(`🔎 CCP Orderer entry: ${o} url:`, ord && ord.url ? ord.url : '(MISSING)');
+        });
       } catch (_) {
         // ignore debug errors
       }
