@@ -56,13 +56,13 @@ class FabricConnection {
 
   async initialize() {
     try {
-      console.log('🔗 Initializing Fabric connection...');
+      console.log('Initializing Fabric connection...');
 
       // Load connection profile
       const ccpPath = path.resolve(__dirname, '..', 'fabric-network', 'connection-profile.json');
       
       if (!fs.existsSync(ccpPath)) {
-        console.log('⚠️  Connection profile not found. Blockchain features disabled.');
+        console.log('Connection profile not found. Blockchain features disabled.');
         return false;
       }
 
@@ -77,7 +77,7 @@ class FabricConnection {
       let identity = await this.wallet.get('admin');
       
       if (!identity) {
-        console.log('⚠️  Admin identity not found. Creating from certificates...');
+        console.log('Admin identity not found. Creating from certificates...');
         await this.enrollAdmin();
         identity = await this.wallet.get('admin');
       }
@@ -93,7 +93,7 @@ class FabricConnection {
       try {
         this._injectTlsCerts(ccp);
       } catch (e) {
-        console.warn('⚠️  Could not inject TLS certs into connection profile:', e.message);
+        console.warn('Could not inject TLS certs into connection profile:', e.message);
       }
 
       // Debug: show first-line of any loaded peer/orderer PEMs to validate format
@@ -101,23 +101,23 @@ class FabricConnection {
         Object.keys(ccp.peers || {}).forEach((p) => {
           const peer = ccp.peers[p];
           if (peer && peer.tlsCACerts && peer.tlsCACerts.pem) {
-            console.log(`🔐 Peer ${p} TLS PEM head:`, peer.tlsCACerts.pem.split('\n')[0]);
+            console.log(`Peer ${p} TLS PEM head:`, peer.tlsCACerts.pem.split('\n')[0]);
           }
         });
         Object.keys(ccp.orderers || {}).forEach((o) => {
           const ord = ccp.orderers[o];
           if (ord && ord.tlsCACerts && ord.tlsCACerts.pem) {
-            console.log(`🔐 Orderer ${o} TLS PEM head:`, ord.tlsCACerts.pem.split('\n')[0]);
+            console.log(`Orderer ${o} TLS PEM head:`, ord.tlsCACerts.pem.split('\n')[0]);
           }
         });
         // Also print url for each peer and orderer to diagnose missing url errors
         Object.keys(ccp.peers || {}).forEach((p) => {
           const peer = ccp.peers[p];
-          console.log(`🔎 CCP Peer entry: ${p} url:`, peer && peer.url ? peer.url : '(MISSING)');
+          console.log(`CCP Peer entry: ${p} url:`, peer && peer.url ? peer.url : '(MISSING)');
         });
         Object.keys(ccp.orderers || {}).forEach((o) => {
           const ord = ccp.orderers[o];
-          console.log(`🔎 CCP Orderer entry: ${o} url:`, ord && ord.url ? ord.url : '(MISSING)');
+          console.log(`CCP Orderer entry: ${o} url:`, ord && ord.url ? ord.url : '(MISSING)');
         });
       } catch (_) {
         // ignore debug errors
@@ -134,11 +134,11 @@ class FabricConnection {
       this.contract = this.network.getContract('healthcare');
 
       this.isConnected = true;
-      console.log('✅ Connected to Fabric network successfully');
+      console.log('Connected to Fabric network successfully');
       return true;
 
     } catch (error) {
-      console.error('❌ Fabric connection error:', error.message);
+      console.error('Fabric connection error:', error.message);
       this.isConnected = false;
       return false;
     }
@@ -166,7 +166,7 @@ class FabricConnection {
       if (certFiles.length === 0) {
         throw new Error(`No certificate files found in: ${signcertsPath}`);
       }
-      console.log('ℹ️  Found signcert files:', certFiles);
+      console.log('Found signcert files:', certFiles);
       const certificate = fs.readFileSync(path.join(signcertsPath, certFiles[0]), 'utf8').toString();
 
       // Locate private key (take first file in keystore)
@@ -181,7 +181,7 @@ class FabricConnection {
       if (keyFiles.length === 0) {
         throw new Error(`No private key files found in: ${keyPath}`);
       }
-      console.log('ℹ️  Found keystore files:', keyFiles);
+      console.log('Found keystore files:', keyFiles);
       const privateKey = fs.readFileSync(path.join(keyPath, keyFiles[0]), 'utf8').toString();
 
       const identity = {
@@ -194,11 +194,11 @@ class FabricConnection {
       };
 
       await this.wallet.put('admin', identity);
-      console.log('✅ Admin identity enrolled successfully');
+      console.log('Admin identity enrolled successfully');
       return true;
 
     } catch (error) {
-      console.error('❌ Error enrolling admin:', error && error.message ? error.message : error);
+      console.error('Error enrolling admin:', error && error.message ? error.message : error);
       return false;
     }
   }
@@ -206,15 +206,15 @@ class FabricConnection {
   async submitTransaction(functionName, ...args) {
     try {
       if (!this.isConnected || !this.contract) {
-        console.log('⚠️  Fabric not connected. Skipping blockchain transaction.');
+        console.log('Fabric not connected. Skipping blockchain transaction.');
         return null;
       }
 
       const result = await this.contract.submitTransaction(functionName, ...args);
       return result.toString();
 
-    } catch (error) {
-      console.error(`❌ Error submitting transaction ${functionName}:`, error.message);
+      } catch (error) {
+      console.error(`Error submitting transaction ${functionName}:`, error.message);
       throw error;
     }
   }
@@ -222,7 +222,7 @@ class FabricConnection {
   async evaluateTransaction(functionName, ...args) {
     try {
       if (!this.isConnected || !this.contract) {
-        console.log('⚠️  Fabric not connected. Skipping blockchain query.');
+        console.log('Fabric not connected. Skipping blockchain query.');
         return null;
       }
 
@@ -230,7 +230,7 @@ class FabricConnection {
       return result.toString();
 
     } catch (error) {
-      console.error(`❌ Error evaluating transaction ${functionName}:`, error.message);
+      console.error(`Error evaluating transaction ${functionName}:`, error.message);
       throw error;
     }
   }
@@ -240,10 +240,10 @@ class FabricConnection {
       if (this.gateway) {
         await this.gateway.disconnect();
         this.isConnected = false;
-        console.log('✅ Disconnected from Fabric network');
+        console.log('Disconnected from Fabric network');
       }
     } catch (error) {
-      console.error('❌ Error disconnecting:', error.message);
+      console.error('Error disconnecting:', error.message);
     }
   }
 }
