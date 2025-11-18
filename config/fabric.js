@@ -11,6 +11,42 @@ class FabricConnection {
     this.isConnected = false;
   }
 
+  _injectTlsCerts(ccp) {
+    // Load TLS CA certs from organizations folder and attach PEM strings to ccp
+    try {
+      const orgsBase = path.join(__dirname, '..', 'organizations');
+
+      // peer0.org1
+      const peer1Tls = path.join(orgsBase, 'peerOrganizations', 'org1.example.com', 'peers', 'peer0.org1.example.com', 'tls', 'ca.crt');
+      if (fs.existsSync(peer1Tls)) {
+        const pem = fs.readFileSync(peer1Tls, 'utf8');
+        if (!ccp.peers) ccp.peers = {};
+        ccp.peers['peer0.org1.example.com'] = ccp.peers['peer0.org1.example.com'] || {};
+        ccp.peers['peer0.org1.example.com'].tlsCACerts = { pem };
+      }
+
+      // peer0.org2 (if exists)
+      const peer2Tls = path.join(orgsBase, 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt');
+      if (fs.existsSync(peer2Tls)) {
+        const pem = fs.readFileSync(peer2Tls, 'utf8');
+        ccp.peers['peer0.org2.example.com'] = ccp.peers['peer0.org2.example.com'] || {};
+        ccp.peers['peer0.org2.example.com'].tlsCACerts = { pem };
+      }
+
+      // orderer
+      const ordererTls = path.join(orgsBase, 'ordererOrganizations', 'example.com', 'orderers', 'orderer.example.com', 'msp', 'tlscacerts', 'tlsca.example.com-cert.pem');
+      if (fs.existsSync(ordererTls)) {
+        const pem = fs.readFileSync(ordererTls, 'utf8');
+        if (!ccp.orderers) ccp.orderers = {};
+        ccp.orderers['orderer.example.com'] = ccp.orderers['orderer.example.com'] || {};
+        ccp.orderers['orderer.example.com'].tlsCACerts = { pem };
+      }
+    } catch (err) {
+      // bubble up so callers know injection failed
+      throw err;
+    }
+  }
+
   async initialize() {
     try {
       console.log('🔗 Initializing Fabric connection...');
@@ -46,6 +82,31 @@ class FabricConnection {
 
       // Connect to gateway
       this.gateway = new Gateway();
+      // Try to inject TLS certs into the connection profile (if present on disk)
+      try {
+        this._injectTlsCerts(ccp);
+      } catch (e) {
+        console.warn('⚠️  Could not inject TLS certs into connection profile:', e.message);
+      }
+
+      // Debug: show first-line of any loaded peer/orderer PEMs to validate format
+      try {
+        Object.keys(ccp.peers || {}).forEach((p) => {
+          const peer = ccp.peers[p];
+          if (peer && peer.tlsCACerts && peer.tlsCACerts.pem) {
+            console.log(`🔐 Peer ${p} TLS PEM head:`, peer.tlsCACerts.pem.split('\n')[0]);
+          }
+        });
+        Object.keys(ccp.orderers || {}).forEach((o) => {
+          const ord = ccp.orderers[o];
+          if (ord && ord.tlsCACerts && ord.tlsCACerts.pem) {
+            console.log(`🔐 Orderer ${o} TLS PEM head:`, ord.tlsCACerts.pem.split('\n')[0]);
+          }
+        });
+      } catch (_) {
+        // ignore debug errors
+      }
+
       await this.gateway.connect(ccp, {
         wallet: this.wallet,
         identity: 'admin',
