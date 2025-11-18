@@ -16,30 +16,37 @@ class FabricConnection {
     try {
       const orgsBase = path.join(__dirname, '..', 'organizations');
 
-      // peer0.org1
+      // peer0.org1 - only attach if peer entry already exists in the CCP
       const peer1Tls = path.join(orgsBase, 'peerOrganizations', 'org1.example.com', 'peers', 'peer0.org1.example.com', 'tls', 'ca.crt');
       if (fs.existsSync(peer1Tls)) {
         const pem = fs.readFileSync(peer1Tls, 'utf8');
-        if (!ccp.peers) ccp.peers = {};
-        ccp.peers['peer0.org1.example.com'] = ccp.peers['peer0.org1.example.com'] || {};
-        ccp.peers['peer0.org1.example.com'].tlsCACerts = { pem };
+        if (ccp.peers && ccp.peers['peer0.org1.example.com']) {
+          ccp.peers['peer0.org1.example.com'].tlsCACerts = { pem };
+        } else {
+          console.warn('⚠️  CCP has no entry for peer0.org1.example.com — skipping TLS injection for this peer');
+        }
       }
 
       // peer0.org2 (if exists)
       const peer2Tls = path.join(orgsBase, 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt');
       if (fs.existsSync(peer2Tls)) {
         const pem = fs.readFileSync(peer2Tls, 'utf8');
-        ccp.peers['peer0.org2.example.com'] = ccp.peers['peer0.org2.example.com'] || {};
-        ccp.peers['peer0.org2.example.com'].tlsCACerts = { pem };
+        if (ccp.peers && ccp.peers['peer0.org2.example.com']) {
+          ccp.peers['peer0.org2.example.com'].tlsCACerts = { pem };
+        } else {
+          console.warn('⚠️  CCP has no entry for peer0.org2.example.com — skipping TLS injection for this peer');
+        }
       }
 
       // orderer
       const ordererTls = path.join(orgsBase, 'ordererOrganizations', 'example.com', 'orderers', 'orderer.example.com', 'msp', 'tlscacerts', 'tlsca.example.com-cert.pem');
       if (fs.existsSync(ordererTls)) {
         const pem = fs.readFileSync(ordererTls, 'utf8');
-        if (!ccp.orderers) ccp.orderers = {};
-        ccp.orderers['orderer.example.com'] = ccp.orderers['orderer.example.com'] || {};
-        ccp.orderers['orderer.example.com'].tlsCACerts = { pem };
+        if (ccp.orderers && ccp.orderers['orderer.example.com']) {
+          ccp.orderers['orderer.example.com'].tlsCACerts = { pem };
+        } else {
+          console.warn('⚠️  CCP has no entry for orderer.example.com — skipping TLS injection for orderer');
+        }
       }
     } catch (err) {
       // bubble up so callers know injection failed
