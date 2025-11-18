@@ -70,12 +70,33 @@ class FabricConnection {
   async enrollAdmin() {
     try {
       // Import admin credentials from test-network
-      const credPath = path.join(__dirname, '..', 'organizations', 'peerOrganizations', 
-                                  'org1.example.com', 'users', 'Admin@org1.example.com');
-      
-      const certificate = fs.readFileSync(path.join(credPath, 'msp', 'signcerts', 'cert.pem')).toString();
+      const credPath = path.join(__dirname, '..', 'organizations', 'peerOrganizations', 'org1.example.com', 'users', 'Admin@org1.example.com');
+
+      // Ensure the credential path exists
+      if (!fs.existsSync(credPath)) {
+        throw new Error(`Admin credential path not found: ${credPath}`);
+      }
+
+      // Locate certificate (take first file in signcerts)
+      const signcertsPath = path.join(credPath, 'msp', 'signcerts');
+      if (!fs.existsSync(signcertsPath)) {
+        throw new Error(`signcerts folder not found: ${signcertsPath}`);
+      }
+      const certFiles = fs.readdirSync(signcertsPath).filter(f => f && f.indexOf('.') !== -1);
+      if (certFiles.length === 0) {
+        throw new Error(`No certificate files found in: ${signcertsPath}`);
+      }
+      const certificate = fs.readFileSync(path.join(signcertsPath, certFiles[0])).toString();
+
+      // Locate private key (take first file in keystore)
       const keyPath = path.join(credPath, 'msp', 'keystore');
-      const keyFiles = fs.readdirSync(keyPath);
+      if (!fs.existsSync(keyPath)) {
+        throw new Error(`keystore folder not found: ${keyPath}`);
+      }
+      const keyFiles = fs.readdirSync(keyPath).filter(f => f && f.indexOf('.') !== -1);
+      if (keyFiles.length === 0) {
+        throw new Error(`No private key files found in: ${keyPath}`);
+      }
       const privateKey = fs.readFileSync(path.join(keyPath, keyFiles[0])).toString();
 
       const identity = {
@@ -92,7 +113,7 @@ class FabricConnection {
       return true;
 
     } catch (error) {
-      console.error('❌ Error enrolling admin:', error.message);
+      console.error('❌ Error enrolling admin:', error && error.message ? error.message : error);
       return false;
     }
   }
