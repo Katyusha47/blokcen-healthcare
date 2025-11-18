@@ -159,22 +159,30 @@ class FabricConnection {
       if (!fs.existsSync(signcertsPath)) {
         throw new Error(`signcerts folder not found: ${signcertsPath}`);
       }
-      const certFiles = fs.readdirSync(signcertsPath).filter(f => f && f.indexOf('.') !== -1);
+      // Choose the first regular file in signcerts (filenames may not contain dots)
+      const certFiles = fs.readdirSync(signcertsPath).filter(f => {
+        try { return fs.statSync(path.join(signcertsPath, f)).isFile(); } catch { return false; }
+      });
       if (certFiles.length === 0) {
         throw new Error(`No certificate files found in: ${signcertsPath}`);
       }
-      const certificate = fs.readFileSync(path.join(signcertsPath, certFiles[0])).toString();
+      console.log('ℹ️  Found signcert files:', certFiles);
+      const certificate = fs.readFileSync(path.join(signcertsPath, certFiles[0]), 'utf8').toString();
 
       // Locate private key (take first file in keystore)
       const keyPath = path.join(credPath, 'msp', 'keystore');
       if (!fs.existsSync(keyPath)) {
         throw new Error(`keystore folder not found: ${keyPath}`);
       }
-      const keyFiles = fs.readdirSync(keyPath).filter(f => f && f.indexOf('.') !== -1);
+      // Choose the first regular file in keystore (key filename may not have an extension)
+      const keyFiles = fs.readdirSync(keyPath).filter(f => {
+        try { return fs.statSync(path.join(keyPath, f)).isFile(); } catch { return false; }
+      });
       if (keyFiles.length === 0) {
         throw new Error(`No private key files found in: ${keyPath}`);
       }
-      const privateKey = fs.readFileSync(path.join(keyPath, keyFiles[0])).toString();
+      console.log('ℹ️  Found keystore files:', keyFiles);
+      const privateKey = fs.readFileSync(path.join(keyPath, keyFiles[0]), 'utf8').toString();
 
       const identity = {
         credentials: {
