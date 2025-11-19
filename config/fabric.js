@@ -328,7 +328,16 @@ class FabricConnection {
       return true;
 
     } catch (error) {
-      console.error('Fabric connection error:', error.message);
+      // Log full error object and stack for deeper debugging (gRPC details may be present)
+      try {
+        console.error('Fabric connection error (full):', error);
+        if (error && error.stack) console.error(error.stack);
+        // If error contains a `details` or `metadata`, print them too
+        if (error && error.details) console.error('error.details:', error.details);
+        if (error && error.raw && error.raw.toString) console.error('error.raw:', error.raw.toString());
+      } catch (logErr) {
+        console.error('Error while logging connection error:', logErr);
+      }
       this.isConnected = false;
       return false;
     }
