@@ -208,11 +208,33 @@ class FabricConnection {
         // ignore debug errors
       }
 
-      await this.gateway.connect(ccp, {
-        wallet: this.wallet,
-        identity: 'admin',
-        discovery: { enabled: true, asLocalhost: true }
-      });
+      // Attempt to connect with a small retry loop — peers may still be warming up.
+      const maxRetries = parseInt(process.env.FABRIC_CONNECT_RETRIES || '5', 10);
+      const delayMs = parseInt(process.env.FABRIC_CONNECT_DELAY_MS || '2000', 10);
+      let connected = false;
+      let lastErr = null;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`Gateway connect attempt ${attempt}/${maxRetries}...`);
+          await this.gateway.connect(ccp, {
+            wallet: this.wallet,
+            identity: 'admin',
+            discovery: { enabled: true, asLocalhost: true }
+          });
+          connected = true;
+          break;
+        } catch (err) {
+          lastErr = err;
+          console.warn(`Gateway connect attempt ${attempt} failed: ${err.message}`);
+          if (attempt < maxRetries) {
+            await new Promise(r => setTimeout(r, delayMs));
+            console.log('Retrying gateway.connect...');
+          }
+        }
+      }
+      if (!connected) {
+        throw lastErr || new Error('Failed to connect gateway after retries');
+      }
 
       // Get network and contract
       this.network = await this.gateway.getNetwork('healthcarechannel');
