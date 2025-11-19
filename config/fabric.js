@@ -294,7 +294,29 @@ class FabricConnection {
         }
       }
       if (!connected) {
-        throw lastErr || new Error('Failed to connect gateway after retries');
+        console.warn('Initial gateway.connect attempts failed. Trying fallback connect with discovery disabled.');
+        // Final fallback: try connecting with discovery disabled (useful for debugging)
+        const fallbackRetries = parseInt(process.env.FABRIC_FALLBACK_RETRIES || '3', 10);
+        for (let f = 1; f <= fallbackRetries; f++) {
+          try {
+            console.log(`Fallback gateway.connect attempt ${f}/${fallbackRetries} (discovery disabled)...`);
+            await this.gateway.connect(ccp, {
+              wallet: this.wallet,
+              identity: 'admin',
+              discovery: { enabled: false, asLocalhost: true }
+            });
+            connected = true;
+            console.log('Fallback connect succeeded (discovery disabled)');
+            break;
+          } catch (err) {
+            console.warn(`Fallback attempt ${f} failed: ${err.message}`);
+            if (f < fallbackRetries) await new Promise(r => setTimeout(r, delayMs));
+            lastErr = err;
+          }
+        }
+      }
+      if (!connected) {
+        throw lastErr || new Error('Failed to connect gateway after retries and fallback');
       }
 
       // Get network and contract
