@@ -1,0 +1,21 @@
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=healthcare_blockchain
+DB_PORT=3306
+
+# JWT Secret
+JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+
+# Hyperledger Fabric Configuration
+FABRIC_NETWORK_PATH=./fabric-network
+FABRIC_CHANNEL=healthcarechannel
+FABRIC_CHAINCODE=healthcare
+ORG_MSP_ID=Org1MSP
+PEER_ENDPOINT=localhost:7051
+ORDERER_ENDPOINT=localhost:7050
