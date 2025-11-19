@@ -119,6 +119,35 @@ class FabricConnection {
           const ord = ccp.orderers[o];
           console.log(`CCP Orderer entry: ${o} url:`, ord && ord.url ? ord.url : '(MISSING)');
         });
+
+        // Runtime check: ensure any grpcs:// endpoint has a tlsCACerts.pem provided
+        try {
+          const missing = [];
+          Object.keys(ccp.peers || {}).forEach((p) => {
+            const peer = ccp.peers[p];
+            if (peer && peer.url && peer.url.toLowerCase().startsWith('grpcs://')) {
+              if (!peer.tlsCACerts || !peer.tlsCACerts.pem) {
+                missing.push(`peer ${p}`);
+              }
+            }
+          });
+          Object.keys(ccp.orderers || {}).forEach((o) => {
+            const ord = ccp.orderers[o];
+            if (ord && ord.url && ord.url.toLowerCase().startsWith('grpcs://')) {
+              if (!ord.tlsCACerts || !ord.tlsCACerts.pem) {
+                missing.push(`orderer ${o}`);
+              }
+            }
+          });
+          if (missing.length > 0) {
+            console.error('Missing TLS PEM(s) for endpoints:', missing.join(', '));
+            console.error('Ensure TLS CA PEMs are present in the organizations folder or in the connection-profile.json under tlsCACerts.pem');
+            throw new Error(`PEM encoded certificate is required for: ${missing.join(', ')}`);
+          }
+        } catch (e) {
+          // Re-throw so outer catch prints a single clear message
+          throw e;
+        }
       } catch (_) {
         // ignore debug errors
       }
