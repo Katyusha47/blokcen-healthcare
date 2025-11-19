@@ -12,42 +12,98 @@ class FabricConnection {
   }
 
   _injectTlsCerts(ccp) {
-    // Load TLS CA certs from organizations folder and attach PEM strings to ccp
+    // Load TLS CA certs from organizations folder and attach PEM strings to ccp.
+    // Also attempt to persist PEMs into connection-profile.json (dev convenience) when found.
     try {
       const orgsBase = path.join(__dirname, '..', 'organizations');
+      const found = [];
+
+      // helper: try array of candidate paths, return first that exists
+      const findFirst = (candidates) => {
+        for (const p of candidates) {
+          if (fs.existsSync(p)) return p;
+        }
+        return null;
+      };
 
       // peer0.org1 - only attach if peer entry already exists in the CCP
-      const peer1Tls = path.join(orgsBase, 'peerOrganizations', 'org1.example.com', 'peers', 'peer0.org1.example.com', 'tls', 'ca.crt');
-      if (fs.existsSync(peer1Tls)) {
+      const peer1Candidates = [
+        path.join(orgsBase, 'peerOrganizations', 'org1.example.com', 'peers', 'peer0.org1.example.com', 'tls', 'ca.crt'),
+        path.join(orgsBase, 'peerOrganizations', 'org1.example.com', 'msp', 'tlscacerts', 'tlsca.org1.example.com-cert.pem')
+      ];
+      const peer1Tls = findFirst(peer1Candidates);
+      if (peer1Tls) {
         const pem = fs.readFileSync(peer1Tls, 'utf8');
         if (ccp.peers && ccp.peers['peer0.org1.example.com']) {
           ccp.peers['peer0.org1.example.com'].tlsCACerts = { pem };
+          found.push({ name: 'peer0.org1.example.com', file: peer1Tls });
         } else {
-          console.warn('⚠️  CCP has no entry for peer0.org1.example.com — skipping TLS injection for this peer');
+          console.warn('CCP has no entry for peer0.org1.example.com — skipping TLS injection for this peer');
         }
       }
 
-      // peer0.org2 (if exists)
-      const peer2Tls = path.join(orgsBase, 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt');
-      if (fs.existsSync(peer2Tls)) {
+      // peer0.org2 (if exists) - try both candidate locations
+      const peer2Candidates = [
+        path.join(orgsBase, 'peerOrganizations', 'org2.example.com', 'peers', 'peer0.org2.example.com', 'tls', 'ca.crt'),
+        path.join(orgsBase, 'peerOrganizations', 'org2.example.com', 'msp', 'tlscacerts', 'tlsca.org2.example.com-cert.pem')
+      ];
+      const peer2Tls = findFirst(peer2Candidates);
+      if (peer2Tls) {
         const pem = fs.readFileSync(peer2Tls, 'utf8');
         if (ccp.peers && ccp.peers['peer0.org2.example.com']) {
           ccp.peers['peer0.org2.example.com'].tlsCACerts = { pem };
+          found.push({ name: 'peer0.org2.example.com', file: peer2Tls });
         } else {
-          console.warn('⚠️  CCP has no entry for peer0.org2.example.com — skipping TLS injection for this peer');
+          console.warn('CCP has no entry for peer0.org2.example.com — skipping TLS injection for this peer');
         }
       }
 
-      // orderer
-      const ordererTls = path.join(orgsBase, 'ordererOrganizations', 'example.com', 'orderers', 'orderer.example.com', 'msp', 'tlscacerts', 'tlsca.example.com-cert.pem');
-      if (fs.existsSync(ordererTls)) {
+      // orderer - multiple possible locations used by test-network
+      const ordererCandidates = [
+        path.join(orgsBase, 'ordererOrganizations', 'example.com', 'orderers', 'orderer.example.com', 'msp', 'tlscacerts', 'tlsca.example.com-cert.pem'),
+        path.join(orgsBase, 'ordererOrganizations', 'example.com', 'orderers', 'orderer.example.com', 'tls', 'ca.crt'),
+        path.join(orgsBase, 'ordererOrganizations', 'example.com', 'msp', 'tlscacerts', 'tlsca.example.com-cert.pem')
+      ];
+      const ordererTls = findFirst(ordererCandidates);
+      if (ordererTls) {
         const pem = fs.readFileSync(ordererTls, 'utf8');
         if (ccp.orderers && ccp.orderers['orderer.example.com']) {
           ccp.orderers['orderer.example.com'].tlsCACerts = { pem };
+          found.push({ name: 'orderer.example.com', file: ordererTls });
         } else {
-          console.warn('⚠️  CCP has no entry for orderer.example.com — skipping TLS injection for orderer');
+          console.warn('CCP has no entry for orderer.example.com — skipping TLS injection for orderer');
         }
       }
+
+      // If we injected any PEMs, log which files were used
+      if (found.length > 0) {
+        found.forEach(f => console.log(`Injected TLS PEM for ${f.name} from ${f.file}`));
+
+        // Attempt to persist the PEMs back into connection-profile.json for convenience (dev only)
+        try {
+          const ccpPath = path.resolve(__dirname, '..', 'fabric-network', 'connection-profile.json');
+          if (fs.existsSync(ccpPath)) {
+            const raw = fs.readFileSync(ccpPath, 'utf8');
+            const diskCcp = JSON.parse(raw);
+            // merge tlsCACerts.pem for any peers/orderers we injected
+            found.forEach(f => {
+              if (diskCcp.peers && diskCcp.peers[f.name]) {
+                diskCcp.peers[f.name].tlsCACerts = diskCcp.peers[f.name].tlsCACerts || {};
+                diskCcp.peers[f.name].tlsCACerts.pem = ccp.peers[f.name].tlsCACerts.pem;
+              }
+              if (diskCcp.orderers && diskCcp.orderers[f.name]) {
+                diskCcp.orderers[f.name].tlsCACerts = diskCcp.orderers[f.name].tlsCACerts || {};
+                diskCcp.orderers[f.name].tlsCACerts.pem = ccp.orderers[f.name].tlsCACerts.pem;
+              }
+            });
+            fs.writeFileSync(ccpPath, JSON.stringify(diskCcp, null, 2), 'utf8');
+            console.log('Persisted injected TLS PEMs into fabric-network/connection-profile.json');
+          }
+        } catch (e) {
+          console.warn('Could not persist injected PEMs into connection-profile.json:', e.message);
+        }
+      }
+
     } catch (err) {
       // bubble up so callers know injection failed
       throw err;
