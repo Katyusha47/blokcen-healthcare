@@ -208,6 +208,67 @@ class FabricConnection {
         // ignore debug errors
       }
 
+      // Before connecting, wait for any grpcs endpoints to be reachable (TLS handshake)
+      const waitTimeoutMs = parseInt(process.env.FABRIC_ENDPOINT_WAIT_MS || '5000', 10);
+      const endpointChecks = [];
+      (Object.keys(ccp.peers || {})).forEach((p) => {
+        const peer = ccp.peers[p];
+        if (peer && peer.url && peer.url.toLowerCase().startsWith('grpcs://')) {
+          try {
+            const u = new URL(peer.url);
+            const host = u.hostname === 'localhost' ? 'localhost' : u.hostname;
+            const port = parseInt(u.port || '7051', 10);
+            const pem = peer.tlsCACerts && peer.tlsCACerts.pem ? peer.tlsCACerts.pem : null;
+            const servername = (peer.grpcOptions && (peer.grpcOptions['ssl-target-name-override'] || peer.grpcOptions['hostnameOverride'])) || p;
+            endpointChecks.push({ host, port, pem, servername, name: p });
+          } catch (_) {
+            // ignore malformed URLs
+          }
+        }
+      });
+
+      // helper: wait for TLS endpoint readiness using node's tls.connect
+      const waitForTls = (host, port, pem, servername, timeoutMs) => new Promise((resolve, reject) => {
+        const tls = require('tls');
+        const options = { host, port, servername, rejectUnauthorized: false };
+        if (pem) {
+          options.ca = [pem];
+          options.rejectUnauthorized = true;
+        }
+        const socket = tls.connect(options, () => {
+          socket.end();
+          resolve(true);
+        });
+        socket.setTimeout(timeoutMs, () => {
+          socket.destroy();
+          reject(new Error('timeout'));
+        });
+        socket.on('error', (err) => {
+          socket.destroy();
+          reject(err);
+        });
+      });
+
+      // Run endpoint checks sequentially with short retries to allow peers to warm
+      for (const ep of endpointChecks) {
+        const tries = parseInt(process.env.FABRIC_ENDPOINT_TRIES || '6', 10);
+        let ok = false;
+        for (let i = 1; i <= tries; i++) {
+          try {
+            console.log(`Checking endpoint ${ep.name} ${ep.host}:${ep.port} (try ${i}/${tries})`);
+            // if pem is present, use it, otherwise try without CA first
+            await waitForTls(ep.host, ep.port, ep.pem, ep.servername, waitTimeoutMs);
+            ok = true;
+            break;
+          } catch (e) {
+            if (i < tries) await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+        if (!ok) {
+          console.warn(`Endpoint ${ep.name} did not become ready: ${ep.host}:${ep.port}`);
+        }
+      }
+
       // Attempt to connect with a small retry loop — peers may still be warming up.
       const maxRetries = parseInt(process.env.FABRIC_CONNECT_RETRIES || '5', 10);
       const delayMs = parseInt(process.env.FABRIC_CONNECT_DELAY_MS || '2000', 10);
